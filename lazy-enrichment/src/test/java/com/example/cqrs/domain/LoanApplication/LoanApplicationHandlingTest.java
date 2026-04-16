@@ -8,6 +8,7 @@ import com.example.cqrs.domain.LoanApplication.events.LoanApplicationApprovedEve
 import com.example.cqrs.domain.LoanApplication.events.LoanApplicationEnrichedEvent;
 import com.opencqrs.framework.command.CommandHandlingTest;
 import com.opencqrs.framework.command.CommandHandlingTestFixture;
+import com.opencqrs.framework.command.CommandSubjectAlreadyExistsException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -30,7 +31,7 @@ class LoanApplicationHandlingTest {
     void shouldRejectDuplicateApplication(@Autowired CommandHandlingTestFixture<ApplyLoanRequestCommand> fixture) {
         fixture.given(new LoanApplicationAppliedEvent("app-id", "applicant-1", "10000"))
                 .when(new ApplyLoanRequestCommand("app-id", "applicant-1", "10000"))
-                .expectException(IllegalStateException.class);
+                .expectException(CommandSubjectAlreadyExistsException.class);
     }
 
     @Test
