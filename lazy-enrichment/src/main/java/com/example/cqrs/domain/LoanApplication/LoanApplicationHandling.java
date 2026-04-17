@@ -16,19 +16,16 @@ public class LoanApplicationHandling {
 
     // --- Command Handlers ---
 
+    // State parameter omitted: PRISTINE subject condition guarantees no prior state exists.
     @CommandHandling
-    public String handle(LoanRequest request, ApplyLoanRequestCommand command, CommandEventPublisher<LoanRequest> publisher) {
-        if (request == null) {
-            publisher.publish(
-                    new LoanApplicationAppliedEvent(
-                            command.applicationId(),
-                            command.applicant(),
-                            command.amount()
-                    )
-            );
-        } else {
-            throw new IllegalStateException("Loan application already exists");
-        }
+    public String handle(ApplyLoanRequestCommand command, CommandEventPublisher<LoanRequest> publisher) {
+        publisher.publish(
+                new LoanApplicationAppliedEvent(
+                        command.applicationId(),
+                        command.applicant(),
+                        command.amount()
+                )
+        );
 
         return command.getApplicationId();
     }
@@ -47,6 +44,9 @@ public class LoanApplicationHandling {
 
     @CommandHandling
     public void handle(LoanRequest request, ApproveLoanCommand command, CommandEventPublisher<LoanRequest> publisher) {
+        if (request.manualReviewResult() == null) {
+            throw new IllegalStateException("Loan must be enriched before approval");
+        }
         publisher.publish(
                 new LoanApplicationApprovedEvent(command.getApplicationId())
         );

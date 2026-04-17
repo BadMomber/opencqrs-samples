@@ -4,8 +4,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class CommandRouterGatewayInterceptorExampleApp {
+public class LazyEnrichmentApplication {
     public static void main(String[] args) {
-        SpringApplication.run(CommandRouterGatewayInterceptorExampleApp.class, args);
+        SpringApplication.run(LazyEnrichmentApplication.class, args);
     }
 }
