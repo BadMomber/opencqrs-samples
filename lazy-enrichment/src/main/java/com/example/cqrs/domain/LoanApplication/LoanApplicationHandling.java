@@ -30,6 +30,11 @@ public class LoanApplicationHandling {
         return command.getApplicationId();
     }
 
+    // Imagine: at the time the original LoanApplicationAppliedEvent was written, no manual review
+    // process existed yet. The "COMPLIANT" value below stands in for the outcome of a review that
+    // can only be produced now — by a process, service, or human decision that did not exist at
+    // write time. A sample repo cannot truly simulate that temporal gap; treat the hard-coded value
+    // as a placeholder for whatever runtime-only source actually supplies the missing data.
     @CommandHandling
     public void handle(LoanRequest request, EnsureLoanEnrichmentCommand command, CommandEventPublisher<LoanRequest> publisher) {
         if (request.manualReviewResult() == null) {
