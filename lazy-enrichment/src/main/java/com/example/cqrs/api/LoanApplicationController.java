@@ -1,10 +1,10 @@
 package com.example.cqrs.api;
 
-import com.example.cqrs.domain.LoanApplication.LoanCommandGateway;
 import com.example.cqrs.domain.LoanApplication.commands.ApplyLoanRequestCommand;
 import com.example.cqrs.domain.LoanApplication.commands.ApproveLoanCommand;
 import com.example.cqrs.readmodel.LoanApplicationView;
 import com.example.cqrs.readmodel.LoanApplicationViewRepository;
+import com.opencqrs.framework.command.CommandRouter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/loan")
 public class LoanApplicationController {
 
-    private final LoanCommandGateway gateway;
+    private final CommandRouter commandRouter;
     private final LoanApplicationViewRepository viewRepository;
 
-    public LoanApplicationController(LoanCommandGateway gateway, LoanApplicationViewRepository viewRepository) {
-        this.gateway = gateway;
+    public LoanApplicationController(CommandRouter commandRouter, LoanApplicationViewRepository viewRepository) {
+        this.commandRouter = commandRouter;
         this.viewRepository = viewRepository;
     }
 
@@ -25,7 +25,7 @@ public class LoanApplicationController {
     @PostMapping
     public String apply(@RequestBody ApplyRequest body) {
         var command = new ApplyLoanRequestCommand(body.applicant(), body.amount());
-        gateway.send(command);
+        commandRouter.send(command);
         return command.getApplicationId();
     }
 
@@ -33,7 +33,7 @@ public class LoanApplicationController {
 
     @PostMapping("/approve")
     public void approve(@RequestBody ApproveRequest body) {
-        gateway.send(new ApproveLoanCommand(body.applicationId()));
+        commandRouter.send(new ApproveLoanCommand(body.applicationId()));
     }
 
     @GetMapping("/{applicationId}")

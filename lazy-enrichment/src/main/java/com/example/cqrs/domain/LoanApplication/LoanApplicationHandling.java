@@ -1,8 +1,7 @@
 package com.example.cqrs.domain.LoanApplication;
 
-import com.example.cqrs.domain.LoanApplication.commands.ApproveLoanCommand;
 import com.example.cqrs.domain.LoanApplication.commands.ApplyLoanRequestCommand;
-import com.example.cqrs.domain.LoanApplication.commands.EnsureLoanEnrichmentCommand;
+import com.example.cqrs.domain.LoanApplication.commands.ApproveLoanCommand;
 import com.example.cqrs.domain.LoanApplication.events.LoanApplicationAppliedEvent;
 import com.example.cqrs.domain.LoanApplication.events.LoanApplicationApprovedEvent;
 import com.example.cqrs.domain.LoanApplication.events.LoanApplicationEnrichedEvent;
@@ -10,13 +9,13 @@ import com.opencqrs.framework.command.CommandEventPublisher;
 import com.opencqrs.framework.command.CommandHandlerConfiguration;
 import com.opencqrs.framework.command.CommandHandling;
 import com.opencqrs.framework.command.StateRebuilding;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @CommandHandlerConfiguration
 public class LoanApplicationHandling {
 
     // --- Command Handlers ---
 
-    // State parameter omitted: PRISTINE subject condition guarantees no prior state exists.
     @CommandHandling
     public String handle(ApplyLoanRequestCommand command, CommandEventPublisher<LoanRequest> publisher) {
         publisher.publish(
@@ -30,31 +29,24 @@ public class LoanApplicationHandling {
         return command.getApplicationId();
     }
 
-    // Imagine: at the time the original LoanApplicationAppliedEvent was written, no manual review
-    // process existed yet. The "COMPLIANT" value below stands in for the outcome of a review that
-    // can only be produced now — by a process, service, or human decision that did not exist at
-    // write time. A sample repo cannot truly simulate that temporal gap; treat the hard-coded value
-    // as a placeholder for whatever runtime-only source actually supplies the missing data.
     @CommandHandling
-    public void handle(LoanRequest request, EnsureLoanEnrichmentCommand command, CommandEventPublisher<LoanRequest> publisher) {
-        if (request.manualReviewResult() == null) {
-            publisher.publish(
-                    new LoanApplicationEnrichedEvent(
-                            command.getApplicationId(),
-                            "COMPLIANT"
-                    )
-            );
-        }
-    }
+    public void handle(
+            LoanRequest request,
+            ApproveLoanCommand command,
+            CommandEventPublisher<LoanRequest> publisher,
+            @Autowired ManualReviewService manualReviewService) {
 
-    @CommandHandling
-    public void handle(LoanRequest request, ApproveLoanCommand command, CommandEventPublisher<LoanRequest> publisher) {
-        if (request.manualReviewResult() == null) {
-            throw new IllegalStateException("Loan must be enriched before approval");
+        String reviewResult = request.manualReviewResult();
+        if (reviewResult == null) {
+            // TODO: solution for long running requests - queued event / enriched event
+            reviewResult = manualReviewService.fetchReviewResult(command.getApplicationId());
+            publisher.publish(new LoanApplicationEnrichedEvent(command.getApplicationId(), reviewResult));
         }
-        publisher.publish(
-                new LoanApplicationApprovedEvent(command.getApplicationId())
-        );
+
+        if (!"COMPLIANT".equals(reviewResult)) {
+            throw new IllegalStateException("Loan cannot be approved, review result: " + reviewResult);
+        }
+        publisher.publish(new LoanApplicationApprovedEvent(command.getApplicationId()));
     }
 
     // --- State Rebuilding ---

@@ -2,7 +2,6 @@ package com.example.cqrs.domain.LoanApplication;
 
 import com.example.cqrs.domain.LoanApplication.commands.ApplyLoanRequestCommand;
 import com.example.cqrs.domain.LoanApplication.commands.ApproveLoanCommand;
-import com.example.cqrs.domain.LoanApplication.commands.EnsureLoanEnrichmentCommand;
 import com.example.cqrs.domain.LoanApplication.events.LoanApplicationAppliedEvent;
 import com.example.cqrs.domain.LoanApplication.events.LoanApplicationApprovedEvent;
 import com.example.cqrs.domain.LoanApplication.events.LoanApplicationEnrichedEvent;
@@ -11,9 +10,15 @@ import com.opencqrs.framework.command.CommandHandlingTestFixture;
 import com.opencqrs.framework.command.CommandSubjectAlreadyExistsException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.mockito.Mockito.when;
 
 @CommandHandlingTest
 class LoanApplicationHandlingTest {
+
+    @MockitoBean
+    ManualReviewService manualReviewService;
 
     @Test
     void shouldSubmitNewLoanApplication(@Autowired CommandHandlingTestFixture<ApplyLoanRequestCommand> fixture) {
@@ -35,26 +40,22 @@ class LoanApplicationHandlingTest {
     }
 
     @Test
-    void shouldEnrichWhenManualReviewResultIsMissing(@Autowired CommandHandlingTestFixture<EnsureLoanEnrichmentCommand> fixture) {
+    void shouldEnrichAndApproveInOneAppendWhenNotYetEnriched(
+            @Autowired CommandHandlingTestFixture<ApproveLoanCommand> fixture) {
+        when(manualReviewService.fetchReviewResult("app-id")).thenReturn("COMPLIANT");
+
         fixture.given(new LoanApplicationAppliedEvent("app-id", "applicant-1", "10000"))
-                .when(new EnsureLoanEnrichmentCommand("app-id"))
+                .when(new ApproveLoanCommand("app-id"))
                 .expectSuccessfulExecution()
-                .expectSingleEvent(new LoanApplicationEnrichedEvent("app-id", "COMPLIANT"));
+                .expectEvents(
+                        new LoanApplicationEnrichedEvent("app-id", "COMPLIANT"),
+                        new LoanApplicationApprovedEvent("app-id")
+                );
     }
 
     @Test
-    void shouldSkipEnrichmentWhenAlreadyEnriched(@Autowired CommandHandlingTestFixture<EnsureLoanEnrichmentCommand> fixture) {
-        fixture.given(
-                        new LoanApplicationAppliedEvent("app-id", "applicant-1", "10000"),
-                        new LoanApplicationEnrichedEvent("app-id", "COMPLIANT")
-                )
-                .when(new EnsureLoanEnrichmentCommand("app-id"))
-                .expectSuccessfulExecution()
-                .expectNoEvents();
-    }
-
-    @Test
-    void shouldApproveLoanApplication(@Autowired CommandHandlingTestFixture<ApproveLoanCommand> fixture) {
+    void shouldOnlyApproveWhenAlreadyEnriched(
+            @Autowired CommandHandlingTestFixture<ApproveLoanCommand> fixture) {
         fixture.given(
                         new LoanApplicationAppliedEvent("app-id", "applicant-1", "10000"),
                         new LoanApplicationEnrichedEvent("app-id", "COMPLIANT")
@@ -62,5 +63,15 @@ class LoanApplicationHandlingTest {
                 .when(new ApproveLoanCommand("app-id"))
                 .expectSuccessfulExecution()
                 .expectSingleEvent(new LoanApplicationApprovedEvent("app-id"));
+    }
+
+    @Test
+    void shouldRejectApprovalWhenReviewResultIsNotCompliant(
+            @Autowired CommandHandlingTestFixture<ApproveLoanCommand> fixture) {
+        when(manualReviewService.fetchReviewResult("app-id")).thenReturn("REJECTED");
+
+        fixture.given(new LoanApplicationAppliedEvent("app-id", "applicant-1", "10000"))
+                .when(new ApproveLoanCommand("app-id"))
+                .expectException(IllegalStateException.class);
     }
 }

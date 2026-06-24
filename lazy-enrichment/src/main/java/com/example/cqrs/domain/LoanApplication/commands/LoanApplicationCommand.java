@@ -2,7 +2,7 @@ package com.example.cqrs.domain.LoanApplication.commands;
 
 import com.opencqrs.framework.command.Command;
 
-public sealed interface LoanApplicationCommand extends Command permits ApplyLoanRequestCommand, ApproveLoanCommand, EnsureLoanEnrichmentCommand {
+public sealed interface LoanApplicationCommand extends Command permits ApplyLoanRequestCommand, ApproveLoanCommand {
 
     String getApplicationId();
 
