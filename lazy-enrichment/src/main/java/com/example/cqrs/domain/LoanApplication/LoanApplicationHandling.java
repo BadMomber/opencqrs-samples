@@ -22,7 +22,10 @@ public class LoanApplicationHandling {
                 new LoanApplicationAppliedEvent(
                         command.applicationId(),
                         command.applicant(),
-                        command.amount()
+                        command.amount(),
+                        command.currency(),
+                        command.locationType(),
+                        "IN_PERSON".equals(command.locationType())
                 )
         );
 
@@ -53,12 +56,28 @@ public class LoanApplicationHandling {
 
     @StateRebuilding
     public LoanRequest on(LoanApplicationAppliedEvent event) {
-        return new LoanRequest(event.applicationId(), event.applicant(), event.amount(), null);
+        return new LoanRequest(
+                event.applicationId(),
+                event.applicant(),
+                event.amount(),
+                event.currency(),
+                event.locationType(),
+                event.verifiedAddress(),
+                null
+        );
     }
 
     @StateRebuilding
     public LoanRequest on(LoanRequest instance, LoanApplicationEnrichedEvent event) {
-        return new LoanRequest(instance.applicationId(), instance.applicant(), instance.amount(), event.manualReviewResult());
+        return new LoanRequest(
+                instance.applicationId(),
+                instance.applicant(),
+                instance.amount(),
+                instance.currency(),
+                instance.locationType(),
+                instance.verifiedAddress(),
+                event.manualReviewResult()
+        );
     }
 
     @StateRebuilding

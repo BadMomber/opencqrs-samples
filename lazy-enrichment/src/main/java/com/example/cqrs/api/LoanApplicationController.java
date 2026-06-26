@@ -20,11 +20,16 @@ public class LoanApplicationController {
         this.viewRepository = viewRepository;
     }
 
-    public record ApplyRequest(String applicant, String amount) {}
+    public record ApplyRequest(String applicant, String amount, String currency, String locationType) {}
 
     @PostMapping
     public String apply(@RequestBody ApplyRequest body) {
-        var command = new ApplyLoanRequestCommand(body.applicant(), body.amount());
+        var command = new ApplyLoanRequestCommand(
+                body.applicant(),
+                body.amount(),
+                body.currency() != null ? body.currency() : "EUR",
+                body.locationType() != null ? body.locationType() : "POSTAL"
+        );
         commandRouter.send(command);
         return command.getApplicationId();
     }

@@ -17,7 +17,14 @@ public class LoanApplicationProjection {
 
     @EventHandling("loan-application-projection")
     public void on(LoanApplicationAppliedEvent event) {
-        repository.save(new LoanApplicationView(event.applicationId(), event.applicant(), event.amount()));
+        repository.save(new LoanApplicationView(
+                event.applicationId(),
+                event.applicant(),
+                event.amount(),
+                event.currency(),
+                event.locationType(),
+                event.verifiedAddress()
+        ));
     }
 
     @EventHandling("loan-application-projection")
